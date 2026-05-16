@@ -1,14 +1,16 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
+const chromium = require('chrome-aws-lambda');
+const puppeteer = require('puppeteer-core');
 
 const app = express();
 
 app.get('/availability', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
-    headless: true,
-    args: ['--no-sandbox', '--disable-setuid-sandbox']
-  });
+      args: chromium.args,
+      executablePath: await chromium.executablePath,
+      headless: chromium.headless,
+    });
 
     const page = await browser.newPage();
 
@@ -16,11 +18,10 @@ app.get('/availability', async (req, res) => {
       waitUntil: 'networkidle2'
     });
 
-    // Espera a que todo cargue
     await new Promise(r => setTimeout(r, 5000));
 
     const data = await page.evaluate(async () => {
-      const res = await fetch('https://hotels.cloudbeds.com/booking/availability_calendar', {
+      const res = await fetch('/booking/availability_calendar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -36,9 +37,9 @@ app.get('/availability', async (req, res) => {
     res.json(data);
 
   } catch (error) {
-    console.error(error);
     res.status(500).json({ error: error.message });
   }
 });
 
-app.listen(3000, () => console.log('Running on port 3000'));
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Running on port ${PORT}`));

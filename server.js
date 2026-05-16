@@ -6,9 +6,10 @@ const app = express();
 app.get('/availability', async (req, res) => {
   try {
     const browser = await puppeteer.launch({
-      args: ['--no-sandbox'],
-      headless: true
-    });
+    headless: true,
+    executablePath: '/opt/render/.cache/puppeteer/chrome/linux-121.0.6167.85/chrome-linux64/chrome',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']
+  });
 
     const page = await browser.newPage();
 

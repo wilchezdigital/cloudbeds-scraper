@@ -14,8 +14,13 @@ app.get('/availability', async (req, res) => {
 
     const page = await browser.newPage();
 
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36'
+    );
+    
     await page.goto('https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur', {
-      waitUntil: 'networkidle2'
+      waitUntil: 'domcontentloaded',
+      timeout: 0
     });
 
     await new Promise(r => setTimeout(r, 5000));

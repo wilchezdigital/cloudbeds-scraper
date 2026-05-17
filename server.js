@@ -14,19 +14,15 @@ app.get('/availability', async (req, res) => {
 
     const page = await browser.newPage();
 
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121.0.0.0 Safari/537.36'
-    );
-    
     await page.goto('https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur', {
       waitUntil: 'domcontentloaded',
-      timeout: 0
+      timeout: 60000
     });
 
     await new Promise(r => setTimeout(r, 5000));
 
     const data = await page.evaluate(async () => {
-      const response = await fetch('/booking/availability_calendar', {
+      const response = await fetch('https://hotels.cloudbeds.com/booking/availability_calendar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -34,7 +30,13 @@ app.get('/availability', async (req, res) => {
         body: 'start_date=2026-05-16&end_date=2026-06-18&property_id=7194'
       });
 
-      return await response.json();
+      const text = await response.text();
+
+      try {
+        return JSON.parse(text);
+      } catch (e) {
+        return { raw: text };
+      }
     });
 
     await browser.close();

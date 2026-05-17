@@ -8,10 +8,10 @@ app.get('/availability', async (req, res) => {
 
   try {
     browser = await puppeteer.launch({
-      executablePath: puppeteer.executablePath(),
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true
-    });
+    executablePath: process.env.PUPPETEER_EXECUTABLE_PATH || puppeteer.executablePath(),
+    args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    headless: true
+  });
 
     const page = await browser.newPage();
 

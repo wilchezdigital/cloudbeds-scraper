@@ -3,19 +3,26 @@ const puppeteer = require('puppeteer');
 
 const app = express();
 
-app.get('/availability', async (req, res) => {
-  let browser;
+let browser;
 
-  try {
+// 🔥 REUTILIZAR browser (clave para evitar sleep lento)
+async function getBrowser() {
+  if (!browser) {
     browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: true
     });
+  }
+  return browser;
+}
 
-    const page = await browser.newPage();
+// 🔥 ENDPOINT PRINCIPAL
+app.get('/availability', async (req, res) => {
+  try {
+    const browserInstance = await getBrowser();
+    const page = await browserInstance.newPage();
 
-    // 👇 INTERCEPTAR la request real de Cloudbeds
-    const data = await new Promise(async (resolve, reject) => {
+    const data = await new Promise(async (resolve) => {
       let resolved = false;
 
       page.on('response', async (response) => {
@@ -28,7 +35,7 @@ app.get('/availability', async (req, res) => {
             resolve(json);
           } catch (e) {
             resolve({
-              error: 'No se pudo parsear JSON',
+              error: 'No JSON',
               raw: await response.text()
             });
           }
@@ -43,26 +50,28 @@ app.get('/availability', async (req, res) => {
         }
       );
 
-      // fallback por si no intercepta nada
       setTimeout(() => {
         if (!resolved) {
           resolved = true;
-          resolve({ error: 'No se capturó la request' });
+          resolve({ error: 'No se capturó request' });
         }
       }, 15000);
     });
 
-    await browser.close();
+    await page.close();
 
     res.json(data);
 
   } catch (error) {
-    if (browser) await browser.close();
-
     res.status(500).json({
       error: error.message
     });
   }
+});
+
+// 🔥 PING ENDPOINT (para mantener vivo Render)
+app.get('/ping', (req, res) => {
+  res.send('ok');
 });
 
 const PORT = process.env.PORT || 3000;

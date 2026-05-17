@@ -3,7 +3,14 @@ const puppeteer = require('puppeteer');
 
 const app = express();
 
-// 🔧 Parser de datos (AQUÍ VA)
+
+// 🔹 Endpoint para mantener vivo el servidor (KEEP ALIVE)
+app.get('/ping', (req, res) => {
+  res.send('ok');
+});
+
+
+// 🔹 Parser de datos
 function parseAvailability(raw) {
   const result = {};
 
@@ -33,7 +40,8 @@ function parseAvailability(raw) {
   return result;
 }
 
-// 🚀 Endpoint
+
+// 🔹 Endpoint principal
 app.get('/availability', async (req, res) => {
   let browser;
 
@@ -72,7 +80,6 @@ app.get('/availability', async (req, res) => {
 
     await browser.close();
 
-    // 🔥 AQUÍ usas el parser
     const parsed = parseAvailability(data);
 
     res.json(parsed);
@@ -85,6 +92,7 @@ app.get('/availability', async (req, res) => {
     });
   }
 });
+
 
 const PORT = process.env.PORT || 3000;
 

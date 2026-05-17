@@ -60,23 +60,22 @@ app.get('/availability', async (req, res) => {
 
     await new Promise(r => setTimeout(r, 5000));
 
-    const data = await page.evaluate(async () => {
-      const response = await fetch('https://hotels.cloudbeds.com/booking/availability_calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'start_date=2026-05-16&end_date=2026-06-18&property_id=7194'
-      });
+    const cookies = await page.cookies();
 
-      const text = await response.text();
-
-      try {
-        return JSON.parse(text);
-      } catch (e) {
-        return {};
-      }
+    const cookieHeader = cookies.map(c => `${c.name}=${c.value}`).join('; ');
+    
+    const response = await fetch('https://hotels.cloudbeds.com/booking/availability_calendar', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+        'Cookie': cookieHeader,
+        'User-Agent': 'Mozilla/5.0',
+        'Accept': 'application/json, text/plain, */*'
+      },
+      body: 'start_date=2026-05-16&end_date=2026-06-18&property_id=7194'
     });
+
+const data = await response.json();
 
     await browser.close();
 

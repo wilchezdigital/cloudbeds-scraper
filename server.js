@@ -3,6 +3,37 @@ const puppeteer = require('puppeteer');
 
 const app = express();
 
+// 🔧 Parser de datos (AQUÍ VA)
+function parseAvailability(raw) {
+  const result = {};
+
+  for (const date in raw) {
+    const rooms = raw[date];
+
+    let minPrice = Infinity;
+    let maxPrice = 0;
+    let totalAvail = 0;
+
+    rooms.forEach(r => {
+      const price = parseFloat(r.rate);
+      const avail = parseInt(r.avail);
+
+      if (price < minPrice) minPrice = price;
+      if (price > maxPrice) maxPrice = price;
+      totalAvail += avail;
+    });
+
+    result[date] = {
+      min_price: minPrice,
+      max_price: maxPrice,
+      total_availability: totalAvail
+    };
+  }
+
+  return result;
+}
+
+// 🚀 Endpoint
 app.get('/availability', async (req, res) => {
   let browser;
 
@@ -35,13 +66,16 @@ app.get('/availability', async (req, res) => {
       try {
         return JSON.parse(text);
       } catch (e) {
-        return { raw: text };
+        return {};
       }
     });
 
     await browser.close();
 
-    res.json(data);
+    // 🔥 AQUÍ usas el parser
+    const parsed = parseAvailability(data);
+
+    res.json(parsed);
 
   } catch (error) {
     if (browser) await browser.close();

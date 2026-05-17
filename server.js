@@ -3,73 +3,64 @@ const puppeteer = require('puppeteer');
 
 const app = express();
 
-let browser;
+// 🔥 ENDPOINT PRINCIPAL
+app.get('/availability', async (req, res) => {
+  let browser;
 
-// 🔥 REUTILIZAR browser (clave para evitar sleep lento)
-async function getBrowser() {
-  if (!browser) {
+  try {
     browser = await puppeteer.launch({
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: true
     });
-  }
-  return browser;
-}
 
-// 🔥 ENDPOINT PRINCIPAL
-app.get('/availability', async (req, res) => {
-  try {
-    const browserInstance = await getBrowser();
-    const page = await browserInstance.newPage();
+    const page = await browser.newPage();
 
-    const data = await new Promise(async (resolve) => {
-      let resolved = false;
+    // 🔥 evita bloqueos
+    await page.setUserAgent(
+      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121 Safari/537.36'
+    );
 
-      page.on('response', async (response) => {
-        const url = response.url();
+    await page.goto(
+      'https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur',
+      {
+        waitUntil: 'networkidle2',
+        timeout: 60000
+      }
+    );
 
-        if (url.includes('/booking/availability_calendar') && !resolved) {
-          resolved = true;
-          try {
-            const json = await response.json();
-            resolve(json);
-          } catch (e) {
-            resolve({
-              error: 'No JSON',
-              raw: await response.text()
-            });
-          }
-        }
-      });
+    // 🔥 esperar request real
+    const response = await page.waitForResponse(
+      res =>
+        res.url().includes('/booking/availability_calendar') &&
+        res.request().method() === 'POST',
+      { timeout: 20000 }
+    );
 
-      await page.goto(
-        'https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur',
-        {
-          waitUntil: 'networkidle2',
-          timeout: 60000
-        }
-      );
+    let data;
 
-      setTimeout(() => {
-        if (!resolved) {
-          resolved = true;
-          resolve({ error: 'No se capturó request' });
-        }
-      }, 15000);
-    });
+    try {
+      data = await response.json();
+    } catch (e) {
+      data = {
+        error: 'No JSON',
+        raw: await response.text()
+      };
+    }
 
-    await page.close();
+    await browser.close();
 
     res.json(data);
 
   } catch (error) {
+    if (browser) await browser.close();
+
     res.status(500).json({
       error: error.message
     });
   }
 });
 
-// 🔥 PING ENDPOINT (para mantener vivo Render)
+// 🔥 PING (para n8n o cron)
 app.get('/ping', (req, res) => {
   res.send('ok');
 });

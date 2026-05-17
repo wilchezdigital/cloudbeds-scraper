@@ -4,8 +4,11 @@ const puppeteer = require('puppeteer');
 const app = express();
 
 app.get('/availability', async (req, res) => {
+  let browser;
+
   try {
-    const browser = await puppeteer.launch({
+    browser = await puppeteer.launch({
+      executablePath: puppeteer.executablePath(),
       args: ['--no-sandbox', '--disable-setuid-sandbox'],
       headless: true
     });
@@ -19,7 +22,7 @@ app.get('/availability', async (req, res) => {
     await new Promise(r => setTimeout(r, 5000));
 
     const data = await page.evaluate(async () => {
-      const res = await fetch('/booking/availability_calendar', {
+      const response = await fetch('/booking/availability_calendar', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded'
@@ -27,7 +30,7 @@ app.get('/availability', async (req, res) => {
         body: 'start_date=2026-05-16&end_date=2026-06-18&property_id=7194'
       });
 
-      return await res.json();
+      return await response.json();
     });
 
     await browser.close();
@@ -35,9 +38,16 @@ app.get('/availability', async (req, res) => {
     res.json(data);
 
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    if (browser) await browser.close();
+
+    res.status(500).json({
+      error: error.message
+    });
   }
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Running on port ${PORT}`));
+
+app.listen(PORT, () => {
+  console.log(`Running on port ${PORT}`);
+});

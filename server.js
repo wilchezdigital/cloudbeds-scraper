@@ -19,25 +19,27 @@ app.get('/availability', async (req, res) => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121 Safari/537.36'
     );
 
+    // 🔥 PARAMS DESDE URL
+    const { start, end, property_id, hotel } = req.query;
+
+    const hotelId = hotel || '4NCmwS';
+    const startDate = start || '2026-05-16';
+    const endDate = end || '2026-06-30';
+    const propertyId = property_id || '7194';
+
+    // 🔥 IR AL HOTEL DINÁMICO
     await page.goto(
-      'https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur',
+      `https://hotels.cloudbeds.com/en/reservation/${hotelId}?currency=eur`,
       {
         waitUntil: 'domcontentloaded',
         timeout: 60000
       }
     );
 
-    // Esperar a que cargue bien
+    // Esperar a que cargue
     await new Promise(r => setTimeout(r, 5000));
 
-    // PARAMS DINÁMICOS
-    const { start, end, property_id } = req.query;
-
-    const startDate = start || '2026-05-16';
-    const endDate = end || '2026-06-30';
-    const propertyId = property_id || '7194';
-
-    // FETCH DESDE EL CONTEXTO DEL NAVEGADOR
+    // 🔥 FETCH REAL DESDE EL NAVEGADOR
     const data = await page.evaluate(
       async ({ startDate, endDate, propertyId }) => {
         const response = await fetch('/booking/availability_calendar', {
@@ -60,7 +62,7 @@ app.get('/availability', async (req, res) => {
       { startDate, endDate, propertyId }
     );
 
-    // FORMATEO
+    // 🔥 FORMATEO
     const formatted = Object.entries(data).map(([date, rooms]) => {
       const prices = rooms.map(r => parseFloat(r.rate));
       const availability = rooms.map(r => r.avail);
@@ -86,7 +88,7 @@ app.get('/availability', async (req, res) => {
   }
 });
 
-// KEEP ALIVE (para n8n)
+// KEEP ALIVE
 app.get('/ping', (req, res) => {
   res.send('ok');
 });

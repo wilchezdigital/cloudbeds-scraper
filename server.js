@@ -49,14 +49,7 @@ app.get('/availability', async (req, res) => {
           body: `start_date=${startDate}&end_date=${endDate}&property_id=${propertyId}`
         });
 
-        try {
-          return await response.json();
-        } catch (e) {
-          return {
-            error: 'No JSON',
-            raw: await response.text()
-          };
-        }
+        return await response.json();
       },
       { startDate, endDate, propertyId }
     );
@@ -74,15 +67,11 @@ app.get('/availability', async (req, res) => {
     });
 
     await browser.close();
-
     res.json(formatted);
 
   } catch (error) {
     if (browser) await browser.close();
-
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 
@@ -136,22 +125,42 @@ app.get('/booking-rooms', async (req, res) => {
           row.querySelector('[data-testid="bedroom-config"]') ||
           row.querySelector('span');
 
-        if (nameEl && nameEl.innerText.length < 120) {
-          results.push({
-            name: nameEl.innerText.trim(),
-            beds: bedsEl?.innerText.trim() || null
-          });
-        }
+        if (!nameEl) return;
+
+        const name = nameEl.innerText.trim();
+        const beds = bedsEl?.innerText.trim() || '';
+
+        const clean = name.toLowerCase();
+
+        let type = 'unknown';
+        if (clean.includes('dorm')) type = 'dorm';
+        else if (clean.includes('double')) type = 'double';
+        else if (clean.includes('single')) type = 'single';
+        else if (clean.includes('triple')) type = 'triple';
+        else if (clean.includes('quad')) type = 'quad';
+
+        let capacity = null;
+        const match = name.match(/(\d+)/);
+        if (match) capacity = parseInt(match[1]);
+
+        let gender = 'mixed';
+        if (clean.includes('female')) gender = 'female';
+
+        results.push({
+          name,
+          beds,
+          type,
+          capacity,
+          gender
+        });
       });
 
-      // limpiar duplicados
       const unique = [];
       const seen = new Set();
 
       results.forEach(r => {
-        const key = r.name + r.beds;
-        if (!seen.has(key)) {
-          seen.add(key);
+        if (!seen.has(r.name)) {
+          seen.add(r.name);
           unique.push(r);
         }
       });
@@ -160,15 +169,11 @@ app.get('/booking-rooms', async (req, res) => {
     });
 
     await browser.close();
-
     res.json(rooms);
 
   } catch (error) {
     if (browser) await browser.close();
-
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 

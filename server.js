@@ -28,14 +28,33 @@ app.get('/availability', async (req, res) => {
 
     await new Promise(r => setTimeout(r, 5000));
 
-    const data = await page.evaluate(async () => {
-      const response = await fetch('/booking/availability_calendar', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded'
-        },
-        body: 'start_date=2026-05-16&end_date=2026-06-30&property_id=7194'
-      });
+    const { start, end, property_id } = req.query;
+
+    const startDate = start || '2026-05-16';
+    const endDate = end || '2026-06-30';
+    const propertyId = property_id || '7194';
+    
+    const data = await page.evaluate(
+      async ({ startDate, endDate, propertyId }) => {
+        const response = await fetch('/booking/availability_calendar', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded'
+          },
+          body: `start_date=${startDate}&end_date=${endDate}&property_id=${propertyId}`
+        });
+    
+        try {
+          return await response.json();
+        } catch (e) {
+          return {
+            error: 'No JSON',
+            raw: await response.text()
+          };
+        }
+      },
+      { startDate, endDate, propertyId }
+    );
 
       try {
         return await response.json();

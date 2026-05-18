@@ -26,10 +26,8 @@ app.get('/availability', async (req, res) => {
       }
     );
 
-    // 🔥 ESPERAR A QUE CARGUE BIEN
     await new Promise(r => setTimeout(r, 5000));
 
-    // 🔥 HACER LA REQUEST MANUAL DESDE EL CONTEXTO REAL
     const data = await page.evaluate(async () => {
       const response = await fetch('/booking/availability_calendar', {
         method: 'POST',
@@ -49,9 +47,23 @@ app.get('/availability', async (req, res) => {
       }
     });
 
+    // 🔥 AQUÍ METES EL FORMATEO
+    const formatted = Object.entries(data).map(([date, rooms]) => {
+      const prices = rooms.map(r => parseFloat(r.rate));
+      const availability = rooms.map(r => r.avail);
+
+      return {
+        date,
+        price_min: Math.min(...prices),
+        price_max: Math.max(...prices),
+        available_rooms: availability.reduce((a, b) => a + b, 0)
+      };
+    });
+
     await browser.close();
 
-    res.json(data);
+    // 🔥 DEVUELVES ESTO (no el data original)
+    res.json(formatted);
 
   } catch (error) {
     if (browser) await browser.close();

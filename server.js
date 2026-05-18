@@ -1,8 +1,3 @@
-const express = require('express');
-const puppeteer = require('puppeteer');
-
-const app = express();
-
 app.get('/availability', async (req, res) => {
   let browser;
 
@@ -28,12 +23,13 @@ app.get('/availability', async (req, res) => {
 
     await new Promise(r => setTimeout(r, 5000));
 
+    // 🔥 PARAMS DINÁMICOS
     const { start, end, property_id } = req.query;
 
     const startDate = start || '2026-05-16';
     const endDate = end || '2026-06-30';
     const propertyId = property_id || '7194';
-    
+
     const data = await page.evaluate(
       async ({ startDate, endDate, propertyId }) => {
         const response = await fetch('/booking/availability_calendar', {
@@ -43,7 +39,7 @@ app.get('/availability', async (req, res) => {
           },
           body: `start_date=${startDate}&end_date=${endDate}&property_id=${propertyId}`
         });
-    
+
         try {
           return await response.json();
         } catch (e) {
@@ -56,17 +52,7 @@ app.get('/availability', async (req, res) => {
       { startDate, endDate, propertyId }
     );
 
-      try {
-        return await response.json();
-      } catch (e) {
-        return {
-          error: 'No JSON',
-          raw: await response.text()
-        };
-      }
-    });
-
-    // 🔥 AQUÍ METES EL FORMATEO
+    // 🔥 FORMATEO
     const formatted = Object.entries(data).map(([date, rooms]) => {
       const prices = rooms.map(r => parseFloat(r.rate));
       const availability = rooms.map(r => r.avail);
@@ -81,7 +67,6 @@ app.get('/availability', async (req, res) => {
 
     await browser.close();
 
-    // 🔥 DEVUELVES ESTO (no el data original)
     res.json(formatted);
 
   } catch (error) {
@@ -91,15 +76,4 @@ app.get('/availability', async (req, res) => {
       error: error.message
     });
   }
-});
-
-// KEEP ALIVE
-app.get('/ping', (req, res) => {
-  res.send('ok');
-});
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => {
-  console.log(`Running on port ${PORT}`);
 });

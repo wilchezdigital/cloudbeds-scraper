@@ -1,3 +1,9 @@
+const express = require('express');
+const puppeteer = require('puppeteer');
+
+const app = express();
+
+// ENDPOINT PRINCIPAL
 app.get('/availability', async (req, res) => {
   let browser;
 
@@ -21,15 +27,17 @@ app.get('/availability', async (req, res) => {
       }
     );
 
+    // Esperar a que cargue bien
     await new Promise(r => setTimeout(r, 5000));
 
-    // 🔥 PARAMS DINÁMICOS
+    // PARAMS DINÁMICOS
     const { start, end, property_id } = req.query;
 
     const startDate = start || '2026-05-16';
     const endDate = end || '2026-06-30';
     const propertyId = property_id || '7194';
 
+    // FETCH DESDE EL CONTEXTO DEL NAVEGADOR
     const data = await page.evaluate(
       async ({ startDate, endDate, propertyId }) => {
         const response = await fetch('/booking/availability_calendar', {
@@ -52,7 +60,7 @@ app.get('/availability', async (req, res) => {
       { startDate, endDate, propertyId }
     );
 
-    // 🔥 FORMATEO
+    // FORMATEO
     const formatted = Object.entries(data).map(([date, rooms]) => {
       const prices = rooms.map(r => parseFloat(r.rate));
       const availability = rooms.map(r => r.avail);
@@ -76,4 +84,15 @@ app.get('/availability', async (req, res) => {
       error: error.message
     });
   }
+});
+
+// KEEP ALIVE (para n8n)
+app.get('/ping', (req, res) => {
+  res.send('ok');
+});
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`Running on port ${PORT}`);
 });

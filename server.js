@@ -27,18 +27,13 @@ app.get('/availability', async (req, res) => {
     try {
       data = JSON.parse(text);
     } catch {
-      data = {
-        error: 'No JSON',
-        raw: text
-      };
+      data = { error: 'No JSON', raw: text };
     }
 
     res.json(data);
 
   } catch (error) {
-    res.status(500).json({
-      error: error.message
-    });
+    res.status(500).json({ error: error.message });
   }
 });
 

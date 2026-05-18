@@ -107,7 +107,6 @@ app.get('/booking-rooms', async (req, res) => {
 
     const page = await browser.newPage();
 
-    // idioma fijo
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'en-US,en;q=0.9'
     });
@@ -123,45 +122,41 @@ app.get('/booking-rooms', async (req, res) => {
 
     await new Promise(r => setTimeout(r, 7000));
 
-    // SCRAPER LIMPIO
     const rooms = await page.evaluate(() => {
       const results = [];
 
-      const elements = document.querySelectorAll('div');
+      const rows = document.querySelectorAll('tr');
 
-      elements.forEach(el => {
-        const text = el.innerText;
+      rows.forEach(row => {
+        const nameEl =
+          row.querySelector('[data-testid="room-type-name"]') ||
+          row.querySelector('a');
 
-        if (!text) return;
+        const bedsEl =
+          row.querySelector('[data-testid="bedroom-config"]') ||
+          row.querySelector('span');
 
-        const clean = text.toLowerCase();
-
-        const isRoom =
-          clean.includes('bed') ||
-          clean.includes('dormitory') ||
-          clean.includes('double room') ||
-          clean.includes('single room') ||
-          clean.includes('quadruple') ||
-          clean.includes('triple') ||
-          clean.includes('cama') ||
-          clean.includes('habitación');
-
-        const isNoise =
-          clean.includes('review') ||
-          clean.includes('location') ||
-          clean.includes('policies') ||
-          clean.includes('facilities') ||
-          clean.includes('availability') ||
-          clean.includes('price match') ||
-          clean.includes('guest') ||
-          clean.length > 180; // corta textos largos
-
-        if (isRoom && !isNoise) {
-          results.push(text.trim());
+        if (nameEl && nameEl.innerText.length < 120) {
+          results.push({
+            name: nameEl.innerText.trim(),
+            beds: bedsEl?.innerText.trim() || null
+          });
         }
       });
 
-      return [...new Set(results)];
+      // limpiar duplicados
+      const unique = [];
+      const seen = new Set();
+
+      results.forEach(r => {
+        const key = r.name + r.beds;
+        if (!seen.has(key)) {
+          seen.add(key);
+          unique.push(r);
+        }
+      });
+
+      return unique;
     });
 
     await browser.close();

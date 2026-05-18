@@ -121,14 +121,13 @@ app.get('/booking-rooms', async (req, res) => {
       timeout: 60000
     });
 
-    await new Promise(r => setTimeout(r, 7000)); // 👈 subimos tiempo
+    await new Promise(r => setTimeout(r, 7000));
 
-    // SCRAPER
+    // SCRAPER LIMPIO
     const rooms = await page.evaluate(() => {
       const results = [];
 
-      // buscar todo el texto visible
-      const elements = document.querySelectorAll('div, span, h3, h4');
+      const elements = document.querySelectorAll('div');
 
       elements.forEach(el => {
         const text = el.innerText;
@@ -137,19 +136,31 @@ app.get('/booking-rooms', async (req, res) => {
 
         const clean = text.toLowerCase();
 
-        // filtros inteligentes
-        if (
-          clean.includes('room') ||
+        const isRoom =
           clean.includes('bed') ||
-          clean.includes('habitación') ||
+          clean.includes('dormitory') ||
+          clean.includes('double room') ||
+          clean.includes('single room') ||
+          clean.includes('quadruple') ||
+          clean.includes('triple') ||
           clean.includes('cama') ||
-          clean.includes('dormitory')
-        ) {
+          clean.includes('habitación');
+
+        const isNoise =
+          clean.includes('review') ||
+          clean.includes('location') ||
+          clean.includes('policies') ||
+          clean.includes('facilities') ||
+          clean.includes('availability') ||
+          clean.includes('price match') ||
+          clean.includes('guest') ||
+          clean.length > 180; // corta textos largos
+
+        if (isRoom && !isNoise) {
           results.push(text.trim());
         }
       });
 
-      // eliminar duplicados
       return [...new Set(results)];
     });
 

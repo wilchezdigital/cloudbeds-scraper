@@ -121,26 +121,36 @@ app.get('/booking-rooms', async (req, res) => {
       timeout: 60000
     });
 
-    await new Promise(r => setTimeout(r, 5000));
+    await new Promise(r => setTimeout(r, 7000)); // 👈 subimos tiempo
 
+    // SCRAPER
     const rooms = await page.evaluate(() => {
       const results = [];
 
-      const rows = document.querySelectorAll('tr');
+      // buscar todo el texto visible
+      const elements = document.querySelectorAll('div, span, h3, h4');
 
-      rows.forEach(row => {
-        const nameEl = row.querySelector('a');
-        const descEl = row.querySelector('span');
+      elements.forEach(el => {
+        const text = el.innerText;
 
-        if (nameEl) {
-          results.push({
-            name: nameEl.innerText.trim(),
-            description: descEl?.innerText.trim() || null
-          });
+        if (!text) return;
+
+        const clean = text.toLowerCase();
+
+        // filtros inteligentes
+        if (
+          clean.includes('room') ||
+          clean.includes('bed') ||
+          clean.includes('habitación') ||
+          clean.includes('cama') ||
+          clean.includes('dormitory')
+        ) {
+          results.push(text.trim());
         }
       });
 
-      return results;
+      // eliminar duplicados
+      return [...new Set(results)];
     });
 
     await browser.close();

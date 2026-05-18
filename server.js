@@ -18,32 +18,36 @@ app.get('/availability', async (req, res) => {
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121 Safari/537.36'
     );
 
-    // INTERCEPTAR RESPUESTA REAL
-    const responsePromise = page.waitForResponse(response =>
-      response.url().includes('/booking/availability_calendar') &&
-      response.request().method() === 'POST'
-    );
-
     await page.goto(
       'https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur',
       {
-        waitUntil: 'networkidle2',
+        waitUntil: 'domcontentloaded',
         timeout: 60000
       }
     );
 
-    const response = await responsePromise;
+    // 🔥 ESPERAR A QUE CARGUE BIEN
+    await new Promise(r => setTimeout(r, 5000));
 
-    let data;
+    // 🔥 HACER LA REQUEST MANUAL DESDE EL CONTEXTO REAL
+    const data = await page.evaluate(async () => {
+      const response = await fetch('/booking/availability_calendar', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded'
+        },
+        body: 'start_date=2026-05-16&end_date=2026-06-30&property_id=7194'
+      });
 
-    try {
-      data = await response.json();
-    } catch (e) {
-      data = {
-        error: 'No JSON',
-        raw: await response.text()
-      };
-    }
+      try {
+        return await response.json();
+      } catch (e) {
+        return {
+          error: 'No JSON',
+          raw: await response.text()
+        };
+      }
+    });
 
     await browser.close();
 

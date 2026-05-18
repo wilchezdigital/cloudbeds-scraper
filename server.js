@@ -107,6 +107,11 @@ app.get('/booking-rooms', async (req, res) => {
 
     const page = await browser.newPage();
 
+    // idioma fijo
+    await page.setExtraHTTPHeaders({
+      'Accept-Language': 'en-US,en;q=0.9'
+    });
+
     await page.setUserAgent(
       'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121 Safari/537.36'
     );

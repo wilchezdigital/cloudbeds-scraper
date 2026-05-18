@@ -1,66 +1,48 @@
 const express = require('express');
-const puppeteer = require('puppeteer');
 
 const app = express();
 
-// 🔥 ENDPOINT PRINCIPAL
 app.get('/availability', async (req, res) => {
-  let browser;
-
   try {
-    browser = await puppeteer.launch({
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
-      headless: true
-    });
+    const start = req.query.start || '2026-05-19';
+    const end = req.query.end || '2026-06-20';
 
-    const page = await browser.newPage();
-
-    // 🔥 evita bloqueos
-    await page.setUserAgent(
-      'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/121 Safari/537.36'
-    );
-
-    await page.goto(
-      'https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur',
+    const response = await fetch(
+      'https://hotels.cloudbeds.com/booking/availability_calendar',
       {
-        waitUntil: 'networkidle2',
-        timeout: 60000
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'User-Agent': 'Mozilla/5.0',
+          'Referer': 'https://hotels.cloudbeds.com/en/reservation/4NCmwS?currency=eur'
+        },
+        body: `start_date=${start}&end_date=${end}&property_id=7194`
       }
     );
 
-    // 🔥 esperar request real
-    const response = await page.waitForResponse(
-      res =>
-        res.url().includes('/booking/availability_calendar') &&
-        res.request().method() === 'POST',
-      { timeout: 20000 }
-    );
+    const text = await response.text();
 
     let data;
 
     try {
-      data = await response.json();
-    } catch (e) {
+      data = JSON.parse(text);
+    } catch {
       data = {
         error: 'No JSON',
-        raw: await response.text()
+        raw: text
       };
     }
-
-    await browser.close();
 
     res.json(data);
 
   } catch (error) {
-    if (browser) await browser.close();
-
     res.status(500).json({
       error: error.message
     });
   }
 });
 
-// 🔥 PING (para n8n o cron)
+// ping
 app.get('/ping', (req, res) => {
   res.send('ok');
 });
